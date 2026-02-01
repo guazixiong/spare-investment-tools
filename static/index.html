@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>闲钱永不眠管理计算器</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="container">
+    <h1>闲钱永不眠管理计算器</h1>
+
+    <!-- 工具切换导航 -->
+    <div class="tool-nav">
+        <button type="button" class="tool-btn active" onclick="switchTool('calculator')" id="btn-calculator">投资计算</button>
+        <button type="button" class="tool-btn" onclick="switchTool('portfolio')" id="btn-portfolio">持仓分析</button>
+        <button type="button" class="tool-btn" onclick="switchTool('config')" id="btn-config">投资比例设置</button>
+    </div>
+
+    <!-- 投资计算工具 -->
+    <div id="calculator-tool" class="tool-section active">
+        <!-- 输入表单 -->
+        <div class="input-section">
+            <h2>输入财务数据</h2>
+            <form id="calculatorForm">
+                <div class="form-group">
+                    <label for="targetLivingExpense">目标生活费（1.5-2个月）：</label>
+                    <input type="number" id="targetLivingExpense" name="targetLivingExpense" 
+                           min="0" step="0.01" required>
+                    <span class="unit">元</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="currentLivingExpense">当前生活费余额：</label>
+                    <input type="number" id="currentLivingExpense" name="currentLivingExpense" 
+                           min="0" step="0.01" required>
+                    <span class="unit">元</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="debt">当前负债：</label>
+                    <input type="number" id="debt" name="debt" 
+                           min="0" step="0.01" required>
+                    <span class="unit">元</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newIncome">新增收入：</label>
+                    <input type="number" id="newIncome" name="newIncome" 
+                           min="0" step="0.01" required>
+                    <span class="unit">元</span>
+                </div>
+                
+                <button type="submit" class="btn-calculate">计算投资方案</button>
+            </form>
+            
+            <!-- 持仓数据输入（可选） -->
+            <div class="holdings-section">
+                <h3>持仓数据（可选）</h3>
+                <p class="holdings-help">如果您有持仓数据，可以输入以获取加仓和止盈建议</p>
+                
+                <div id="holdingsContainer">
+                    <!-- 持仓输入项将动态添加到这里 -->
+                </div>
+                
+                <button type="button" class="btn-add-holding" onclick="addHoldingInput()">+ 添加持仓</button>
+            </div>
+            
+            <div class="input-help">
+                <p><strong>说明：</strong></p>
+                <ul>
+                    <li>目标生活费：建议保持 1.5-2 个月的生活费作为流动资金</li>
+                    <li>当前生活费余额：您目前实际拥有的生活费金额</li>
+                    <li>当前负债：需要偿还的债务金额</li>
+                    <li>新增收入：本期新增的可支配收入</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 结果展示区域 -->
+        <div id="resultSection" class="result-section" style="display: none;">
+            <h2>投资方案</h2>
+            
+            <!-- 基础信息 -->
+            <div class="result-card">
+                <h3>基础信息</h3>
+                <div class="result-item">
+                    <span class="label">生活费缺口：</span>
+                    <span class="value" id="livingExpenseGap">0.00</span>
+                    <span class="unit">元</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">可投资金额：</span>
+                    <span class="value highlight" id="investableAmount">0.00</span>
+                    <span class="unit">元</span>
+                </div>
+            </div>
+            
+            <!-- 投资大框架 -->
+            <div class="result-card">
+                <h3>投资大框架分配</h3>
+                <div id="frameworkAllocation"></div>
+            </div>
+            
+            <!-- 基金组合 -->
+            <div class="result-card">
+                <h3>基金组合分配</h3>
+                <div id="fundAllocation"></div>
+            </div>
+            
+            <!-- 定投计划 -->
+            <div class="result-card">
+                <h3>每周定投计划</h3>
+                <div class="result-item">
+                    <span class="label">周二定投：</span>
+                    <span class="value" id="tuesdayAmount">0.00</span>
+                    <span class="unit">元</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">周四定投：</span>
+                    <span class="value" id="thursdayAmount">0.00</span>
+                    <span class="unit">元</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">每周总计：</span>
+                    <span class="value highlight" id="weeklyTotal">0.00</span>
+                    <span class="unit">元</span>
+                </div>
+                <div id="fundsList"></div>
+            </div>
+
+            <!-- 加仓和止盈建议 -->
+            <div id="suggestionsCard" class="result-card" style="display: none;">
+                <h3>加仓和止盈建议</h3>
+                <div id="suggestionsContent"></div>
+            </div>
+
+            <!-- 警告信息 -->
+            <div id="warningMessage" class="warning-message" style="display: none;"></div>
+        </div>
+    </div>
+    <!-- 投资计算工具结束 -->
+
+    <!-- 持仓分析工具 -->
+    <div id="portfolio-tool" class="tool-section" style="display: none;">
+        <div class="input-section">
+            <h2>输入当前持仓</h2>
+            <p class="section-desc">输入您当前各投资类别的持仓金额，系统将分析您的持仓占比是否符合预期配置</p>
+
+            <form id="portfolioForm">
+                <h3>基金组合</h3>
+                <div class="form-group">
+                    <label for="bondFundHolding">中短债基金：</label>
+                    <input type="number" id="bondFundHolding" name="bond_fund" min="0" step="0.01" value="0">
+                    <span class="unit">元</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="dividendFundHolding">红利低波/沪深300：</label>
+                    <input type="number" id="dividendFundHolding" name="dividend_fund" min="0" step="0.01" value="0">
+                    <span class="unit">元</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="usIndexFundHolding">标普/纳指：</label>
+                    <input type="number" id="usIndexFundHolding" name="us_index_fund" min="0" step="0.01" value="0">
+                    <span class="unit">元</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="goldEtfHolding">黄金ETF联接C：</label>
+                    <input type="number" id="goldEtfHolding" name="gold_etf" min="0" step="0.01" value="0">
+                    <span class="unit">元</span>
+                </div>
+
+                <h3>其他投资</h3>
+                <div class="form-group">
+                    <label for="bankFixedIncomeHolding">银行固收R2：</label>
+                    <input type="number" id="bankFixedIncomeHolding" name="bank_fixed_income" min="0" step="0.01" value="0">
+                    <span class="unit">元</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="physicalGoldHolding">实体黄金：</label>
+                    <input type="number" id="physicalGoldHolding" name="physical_gold" min="0" step="0.01" value="0">
+                    <span class="unit">元</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="reserveFundHolding">备用金：</label>
+                    <input type="number" id="reserveFundHolding" name="reserve_fund" min="0" step="0.01" value="0">
+                    <span class="unit">元</span>
+                </div>
+
+                <button type="submit" class="btn-calculate">分析持仓</button>
+            </form>
+
+            <div class="input-help">
+                <p><strong>说明：</strong></p>
+                <ul>
+                    <li>输入您当前各投资类别的实际持仓金额</li>
+                    <li>系统将计算您的实际占比并与预期配置对比</li>
+                    <li>偏差超过±5%的类别将被标记为需要调整</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 持仓分析结果展示区域 -->
+        <div id="portfolioResultSection" class="result-section" style="display: none;">
+            <h2>持仓分析报告</h2>
+
+            <!-- 总览 -->
+            <div class="result-card">
+                <h3>总览</h3>
+                <div class="result-item">
+                    <span class="label">总持仓金额：</span>
+                    <span class="value highlight" id="portfolioTotalAmount">0.00</span>
+                    <span class="unit">元</span>
+                </div>
+            </div>
+
+            <!-- 投资大框架分析 -->
+            <div class="result-card">
+                <h3>投资大框架分析</h3>
+                <div id="frameworkAnalysis"></div>
+            </div>
+
+            <!-- 基金组合内部分析 -->
+            <div class="result-card">
+                <h3>基金组合内部分析</h3>
+                <div id="fundPortfolioAnalysis"></div>
+            </div>
+        </div>
+
+        <!-- 持仓分析错误信息 -->
+        <div id="portfolioErrorMessage" class="error-message" style="display: none;"></div>
+    </div>
+    <!-- 持仓分析工具结束 -->
+
+    <!-- 投资比例设置工具 -->
+    <div id="config-tool" class="tool-section" style="display: none;">
+        <div class="input-section">
+            <h2>投资比例设置</h2>
+            <p class="section-desc">您可以自定义各项投资的比例，系统将根据新的比例进行计算</p>
+
+            <form id="configForm">
+                <h3>投资大框架分配比例</h3>
+                <div class="form-group">
+                    <label for="fundPortfolioRatio">基金组合：</label>
+                    <input type="number" id="fundPortfolioRatio" name="fund_portfolio" min="0" max="100" step="1" value="30">
+                    <span class="unit">%</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="bankFixedIncomeRatio">银行固收R2：</label>
+                    <input type="number" id="bankFixedIncomeRatio" name="bank_fixed_income" min="0" max="100" step="1" value="60">
+                    <span class="unit">%</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="physicalGoldRatio">实体黄金：</label>
+                    <input type="number" id="physicalGoldRatio" name="physical_gold" min="0" max="100" step="1" value="5">
+                    <span class="unit">%</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="reserveFundRatio">备用金：</label>
+                    <input type="number" id="reserveFundRatio" name="reserve_fund" min="0" max="100" step="1" value="5">
+                    <span class="unit">%</span>
+                </div>
+
+                <h3>基金组合内部分配比例</h3>
+                <div class="form-group">
+                    <label for="bondFundRatio">中短债基金：</label>
+                    <input type="number" id="bondFundRatio" name="bond_fund" min="0" max="100" step="1" value="40">
+                    <span class="unit">%</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="dividendFundRatio">红利低波/沪深300：</label>
+                    <input type="number" id="dividendFundRatio" name="dividend_fund" min="0" max="100" step="1" value="30">
+                    <span class="unit">%</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="usIndexFundRatio">标普/纳指：</label>
+                    <input type="number" id="usIndexFundRatio" name="us_index_fund" min="0" max="100" step="1" value="15">
+                    <span class="unit">%</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="goldEtfRatio">黄金ETF联接C：</label>
+                    <input type="number" id="goldEtfRatio" name="gold_etf" min="0" max="100" step="1" value="15">
+                    <span class="unit">%</span>
+                </div>
+
+                <button type="submit" class="btn-calculate">保存设置</button>
+            </form>
+
+            <div class="input-help">
+                <p><strong>说明：</strong></p>
+                <ul>
+                    <li>投资大框架分配比例总和必须为 100%</li>
+                    <li>基金组合内部分配比例总和必须为 100%</li>
+                    <li>修改后的比例将在投资计算和持仓分析中生效</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 设置结果展示区域 -->
+        <div id="configResultSection" class="result-section" style="display: none;">
+            <h2>设置结果</h2>
+            <div class="result-card">
+                <div class="result-item">
+                    <span class="label">状态：</span>
+                    <span class="value highlight" id="configStatus">设置已保存</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 设置错误信息 -->
+        <div id="configErrorMessage" class="error-message" style="display: none;"></div>
+    </div>
+    <!-- 投资比例设置工具结束 -->
+
+    <!-- 错误信息 -->
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

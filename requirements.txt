@@ -1,0 +1,9 @@
+# Flask Web 框架
+Flask==2.3.0
+flask-cors==4.0.0
+Werkzeug==2.3.0
+
+# 测试框架
+pytest==7.4.0
+hypothesis==6.82.0
+pytest-cov==4.1.0
